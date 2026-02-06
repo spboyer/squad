@@ -128,45 +128,6 @@ By week 4, your agents know your conventions, your preferences, your architectur
 
 ## How It Works
 
-```mermaid
-flowchart TB
-    subgraph YOU ["🧑‍💻 You"]
-        input["Ask a question or request work"]
-    end
-
-    subgraph SQUAD ["Squad Coordinator"]
-        route{"Route by signal"}
-    end
-
-    subgraph TEAM ["Your Team"]
-        A1["🏗️ Lead"]
-        A2["⚛️ Frontend"]
-        A3["🔧 Backend"]
-        A4["🧪 Tester"]
-    end
-
-    subgraph MEMORY ["Persistent Memory"]
-        charter["charter.md — Identity & expertise"]
-        history["history.md — Project learnings"]
-        decisions["decisions.md — Shared team brain"]
-        logs["log/ — Session archive"]
-    end
-
-    SCRIBE["📋 Scribe — Silent memory manager"]
-
-    input --> route
-    route -->|"name mentioned"| A1 & A2 & A3 & A4
-    route -->|"quick question"| route
-    A1 & A2 & A3 & A4 --> charter
-    A1 & A2 & A3 & A4 --> history
-    A1 & A2 & A3 & A4 --> decisions
-    SCRIBE --> logs
-    SCRIBE -.->|"propagates decisions"| history
-
-    style SQUAD fill:#6366f1,color:#fff
-    style SCRIBE fill:#6b7280,color:#fff
-```
-
 ### The Key Insight
 
 Each agent gets its **own context window**. No shared bloat. The coordinator is ~5KB. Each agent loads only its charter + history. This means:
