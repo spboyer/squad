@@ -103,13 +103,22 @@ Squad agents aren't stateless assistants. They accumulate project-specific knowl
 ```mermaid
 graph TB
     subgraph W1 ["🌱 Week 1"]
-        K1["River knows:<br/>• Express + Postgres stack<br/>• REST API pattern"]
+        K1["⚛️ Kai knows: React project structure"]
+        R1["🔧 River knows: Express + Postgres stack"]
+        A1["🏗️ Alex knows: Project scope, team roster"]
+        C1["🧪 Casey knows: Test framework chosen"]
     end
     subgraph W4 ["🌿 Week 4"]
-        K4["River knows:<br/>• Express + Postgres stack<br/>• REST API pattern<br/>• Auth uses JWT with RS256<br/>• Rate limiting at 100req/min<br/>• User prefers raw SQL over ORM"]
+        K4["⚛️ Kai knows: Component library, routing, state patterns"]
+        R4["🔧 River knows: Auth with JWT, rate limiting, raw SQL preference"]
+        A4["🏗️ Alex knows: Architecture decisions, trade-offs made"]
+        C4["🧪 Casey knows: Integration test patterns, edge cases found"]
     end
     subgraph W12 ["🌳 Week 12"]
-        K12["River knows:<br/>• Everything above, plus<br/>• Migration patterns via Flyway<br/>• Caching strategy: Redis L2<br/>• Performance bottlenecks found<br/>• 47 decisions in decisions.md"]
+        K12["⚛️ Kai knows: Design system, performance patterns, accessibility"]
+        R12["🔧 River knows: Caching, migrations, monitoring, 47 team decisions"]
+        A12["🏗️ Alex knows: Full project history, risk areas, tech debt"]
+        C12["🧪 Casey knows: Regression patterns, CI pipeline, coverage gaps"]
     end
 
     W1 --> W4 --> W12
