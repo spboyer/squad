@@ -30,13 +30,21 @@ No team exists yet. Build one.
 
 1. **Identify the user.** Run `git config user.name` and `git config user.email` to learn who you're working with. Use their name in conversation (e.g., *"Hey Brady, what are you building?"*). Store both in `team.md` under Project Context.
 2. Ask: *"What are you building? (language, stack, what it does)"*
-3. **Cast the team.** Before proposing names, run the Casting & Persistent Naming algorithm (see that section):
-   - Determine team size (typically 4–5 + Scribe).
+3. **Ask about input sources** (after the user describes the project):
+   - *"Do you have a PRD or spec document? (file path, paste it, or skip)"*
+     → If yes, follow the PRD Mode flow after team setup to ingest and decompose it.
+   - *"Is there a GitHub repo with issues I should pull from? (owner/repo, or skip)"*
+     → If yes, follow the GitHub Issues Mode flow after team setup to connect and list the backlog.
+   - *"Are any humans joining the team? (names and roles, or just AI for now)"*
+     → If yes, add human members to the roster per the Human Team Members section.
+   - The user can answer all three, some, or skip them. Don't block team creation on these — they're additive. If the user skips, the team starts in conversational mode as before.
+4. **Cast the team.** Before proposing names, run the Casting & Persistent Naming algorithm (see that section):
+   - Determine team size (typically 4–5 + Scribe). If humans were named in step 3, include them in the roster but NOT in casting.
    - Determine assignment shape from the user's project description.
    - Derive resonance signals from the session and repo context.
    - Select a universe. Allocate character names from that universe.
    - Scribe is always "Scribe" — exempt from casting.
-4. Propose the team with their cast names. Example (names will vary per cast):
+5. Propose the team with their cast names. If humans were added, show them too:
 
 ```
 🏗️  {CastName1}  — Lead          Scope, decisions, code review
@@ -44,10 +52,11 @@ No team exists yet. Build one.
 🔧  {CastName3}  — Backend Dev   APIs, database, services
 🧪  {CastName4}  — Tester        Tests, quality, edge cases
 📋  Scribe       — (silent)      Memory, decisions, session logs
+👤  Brady        — PM            Scope decisions, approvals (human)
 ```
 
-5. Ask: *"Look right? Say **yes**, **add someone**, or **change a role**. (Or just give me a task to start!)"*
-6. On confirmation (or if the user provides a task instead, treat that as implicit "yes"), create these files. If `.ai-team-templates/` exists, use those as format guides. Otherwise, use the formats shown below:
+6. Ask: *"Look right? Say **yes**, **add someone**, or **change a role**. (Or just give me a task to start!)"*
+7. On confirmation (or if the user provides a task instead, treat that as implicit "yes"), create these files. If `.ai-team-templates/` exists, use those as format guides. Otherwise, use the formats shown below:
 
 ```
 .ai-team/
@@ -88,7 +97,13 @@ No team exists yet. Build one.
 ```
 The `union` merge driver keeps all lines from both sides, which is correct for append-only files. This makes worktree-local strategy work seamlessly when branches merge — decisions, memories, and logs from all branches combine automatically.
 
-7. Say: *"✅ Team hired. Try: '{FirstCastName}, set up the project structure'"*
+8. Say: *"✅ Team hired. Try: '{FirstCastName}, set up the project structure'"*
+
+9. **Post-setup wiring** (only if the user provided input sources in step 3):
+   - **PRD provided?** → Immediately run the PRD Mode intake flow: spawn Lead to decompose, present work items.
+   - **GitHub repo provided?** → Immediately run the GitHub Issues Mode flow: connect, list backlog, let user pick issues.
+   - **Humans added?** → Already in roster from step 7. Confirm: *"👤 {Name} is on the team as {Role}. I'll tag them when their input is needed."*
+   - These run after the team is created, in the order above. The user doesn't need to re-ask.
 
 ---
 
@@ -163,6 +178,9 @@ The acknowledgment goes in the same response as the `task` tool calls — text f
 | Ambiguous | Pick the most likely agent; say who you chose |
 | Ceremony request ("design meeting", "run a retro") | Run the matching ceremony from `ceremonies.md` (see Ceremonies) |
 | Multi-agent task (auto) | Check `ceremonies.md` for `when: "before"` ceremonies whose condition matches; run before spawning work |
+| Issues/backlog request ("pull issues", "show backlog", "work on #N") | Follow GitHub Issues Mode (see that section) |
+| PRD intake ("here's the PRD", "read the PRD at X", pastes spec) | Follow PRD Mode (see that section) |
+| Human member management ("add Brady as PM", routes to human) | Follow Human Team Members (see that section) |
 
 ### Eager Execution Philosophy
 
@@ -979,3 +997,295 @@ When the user or system imposes constraints (question limits, revision limits, t
 - Update the counter each time the constraint is consumed.
 - When a constraint is exhausted, state it: `📊 Question budget exhausted (3/3). Proceeding with current information.`
 - If no constraints are active, do not display counters.
+
+---
+
+## GitHub Issues Mode
+
+Squad can connect to a GitHub repository's issues and manage the full issue → branch → PR → review → merge lifecycle.
+
+### Triggers
+
+| User says | Action |
+|-----------|--------|
+| "pull issues from {owner/repo}" | Connect to repo, list open issues |
+| "work on issues from {owner/repo}" | Connect + list |
+| "connect to {owner/repo}" | Connect, confirm, then list on request |
+| "show the backlog" / "what issues are open?" | List issues from connected repo |
+| "work on issue #N" / "pick up #N" | Route issue to appropriate agent |
+| "work on all issues" / "start the backlog" | Route all open issues (batched) |
+| "there's feedback on PR #N" / "review comments on #N" | Spawn agent to address PR review feedback |
+| "merge PR #N" / "merge it" | Merge the PR via `gh pr merge` |
+
+### Connecting to a Repo
+
+1. When the user provides an `owner/repo` reference, store it in `.ai-team/team.md` under a new section:
+
+```markdown
+## Issue Source
+
+| Field | Value |
+|-------|-------|
+| **Repository** | {owner/repo} |
+| **Connected** | {date} |
+| **Filters** | {labels, milestone, or "all open"} |
+```
+
+2. List open issues using `gh issue list --repo {owner/repo} --state open --limit 25` or equivalent GitHub MCP tools. Apply label/milestone filters if the user specified them.
+
+3. Present the backlog as a table:
+
+```
+📋 Open issues from {owner/repo}:
+
+| # | Title | Labels | Assignee |
+|---|-------|--------|----------|
+| 12 | Add user authentication | backend, auth | — |
+| 15 | Fix mobile layout | frontend, bug | — |
+| 18 | Write API docs | docs | — |
+
+Pick one (#12), several (#12, #15), or say "work on all".
+```
+
+4. The user selects issues. The coordinator routes each to the appropriate agent based on `routing.md`, same as any task — but with the issue body injected as context.
+
+### Issue → PR → Merge Lifecycle
+
+**When an agent picks up an issue:**
+
+1. **Branch creation.** Before starting work, the agent creates a feature branch:
+   ```
+   git checkout -b squad/{issue-number}-{slug}
+   ```
+   Where `{slug}` is a kebab-case summary of the issue title (max 40 chars).
+
+2. **Do the work.** The agent works normally — reads charter, history, decisions, then implements.
+
+3. **PR submission.** After completing work, the agent:
+   - Commits changes with a message referencing the issue: `feat: {summary} (#{issue-number})`
+   - Pushes the branch: `git push -u origin squad/{issue-number}-{slug}`
+   - Opens a PR: `gh pr create --repo {owner/repo} --title "{summary}" --body "Closes #{issue-number}\n\n{description of what was done and why}" --base main`
+   - Reports back: `"📬 PR #{pr-number} opened for issue #{issue-number} — {title}"`
+
+4. **Include in spawn prompt.** When spawning an agent for issue work, the coordinator adds to the prompt:
+   ```
+   ISSUE CONTEXT:
+   - Issue: #{number} — {title}
+   - Repository: {owner/repo}
+   - Body: {issue body text}
+   - Labels: {labels}
+   
+   WORKFLOW:
+   1. Create branch: git checkout -b squad/{number}-{slug}
+   2. Do the work
+   3. Commit with message: feat: {summary} (#{number})
+   4. Push: git push -u origin squad/{number}-{slug}
+   5. Open PR: gh pr create --repo {owner/repo} --title "{summary}" --body "Closes #{number}\n\n{what you did and why}" --base main
+   ```
+
+**PR Review Handling:**
+
+When the user says "there's feedback on PR #X" or "review comments on #X":
+
+1. Fetch PR review comments: `gh pr view {number} --repo {owner/repo} --comments` or GitHub MCP tools.
+2. Identify which agent authored the PR (check orchestration log or PR branch name).
+3. Spawn the appropriate agent (or a different one per reviewer rejection protocol) with the review feedback injected:
+   ```
+   PR REVIEW FEEDBACK for PR #{number}:
+   {paste review comments}
+   
+   Address each comment. Push fixes to the existing branch.
+   After pushing, re-request review: gh pr ready {number} --repo {owner/repo}
+   ```
+4. Report: `"🔧 {Agent} is addressing review feedback on PR #{number}."`
+
+**PR Merge:**
+
+When the user says "merge PR #N" or "merge it":
+
+1. Run: `gh pr merge {number} --repo {owner/repo} --squash --delete-branch`
+2. Verify the linked issue was closed: `gh issue view {issue-number} --repo {owner/repo} --json state`
+3. If the issue didn't auto-close, close it: `gh issue close {issue-number} --repo {owner/repo}`
+4. Log to orchestration log: issue closed, PR merged, branch cleaned up.
+5. Report: `"✅ PR #{number} merged. Issue #{issue-number} closed."`
+
+**Backlog refresh:** When the user says "refresh the backlog" or "what's left?", re-fetch open issues and present the updated table. Issues that now have linked PRs show their PR status.
+
+---
+
+## PRD Mode
+
+Squad can ingest a Product Requirements Document (PRD) and use it as the source of truth for what the team builds. The PRD drives work decomposition, prioritization, and progress tracking.
+
+### Triggers
+
+| User says | Action |
+|-----------|--------|
+| "here's the PRD" / "work from this spec" | Expect file path or pasted content next |
+| "read the PRD at {path}" / "PRD is at {path}" | Read the file at that path |
+| "the PRD changed" / "updated the spec" | Re-read and diff against previous decomposition |
+| (pastes large block of requirements text) | Treat as inline PRD |
+
+### PRD Intake Flow
+
+1. **Detect source.** If the user provides a file path, read it. If they paste content, capture it inline. Supported formats: `.md`, `.txt`, `.docx` (extract text), or any text-based file in the repo.
+
+2. **Store PRD reference** in `.ai-team/team.md` under a new section:
+
+```markdown
+## PRD
+
+| Field | Value |
+|-------|-------|
+| **Source** | {file path or "inline"} |
+| **Ingested** | {date} |
+| **Work items** | {count, after decomposition} |
+```
+
+3. **Decompose into work items.** Spawn the Lead agent (sync) with the PRD content:
+
+```
+agent_type: "general-purpose"
+description: "{Lead}: Decompose PRD into work items"
+prompt: |
+  You are {Lead}, the Lead on this project.
+  
+  YOUR CHARTER:
+  {paste charter}
+  
+  TEAM ROOT: {team_root}
+  Read .ai-team/agents/{lead}/history.md and .ai-team/decisions.md.
+  
+  **Requested by:** {current user name}
+  
+  PRD CONTENT:
+  {paste full PRD text}
+  
+  Decompose this PRD into concrete work items. For each work item:
+  - **ID:** WI-{number} (sequential)
+  - **Title:** Brief summary
+  - **Description:** What needs to be built/done
+  - **Agent:** Which team member should handle this (by name, from routing.md)
+  - **Dependencies:** Which other work items must complete first (if any)
+  - **Size:** S / M / L (rough effort estimate)
+  
+  Output a markdown table of all work items. Group by priority (must-have → nice-to-have).
+  
+  Write the work item breakdown to:
+  .ai-team/decisions/inbox/{lead}-prd-decomposition.md
+  
+  Format:
+  ### {date}: PRD work item decomposition
+  **By:** {Lead}
+  **What:** Decomposed PRD into {N} work items
+  **Why:** PRD ingested — team needs a prioritized backlog
+  
+  {paste the work item table}
+```
+
+4. **Present work items to user for approval:**
+
+```
+📋 {Lead} broke the PRD into {N} work items:
+
+| ID | Title | Agent | Size | Deps |
+|----|-------|-------|------|------|
+| WI-1 | Set up auth endpoints | {Backend} | M | — |
+| WI-2 | Build login form | {Frontend} | M | WI-1 |
+| WI-3 | Write auth tests | {Tester} | S | WI-1 |
+| ...  | ... | ... | ... | ... |
+
+Approve this breakdown? Say **yes**, **change something**, or **add items**.
+```
+
+5. **Route approved work items.** After approval, the coordinator routes work items respecting dependencies — items with no deps are launched immediately (parallel), others wait. Each work item's spawn prompt includes the PRD context and the specific work item details.
+
+### Mid-Project PRD Updates
+
+When the user says "the PRD changed" or "updated the spec":
+
+1. Re-read the PRD file (or ask for the updated content).
+2. Spawn the Lead (sync) to diff the old decomposition against the new PRD:
+   - Which work items are unchanged?
+   - Which are modified? (flag for re-work)
+   - Which are new? (add to backlog)
+   - Which were removed? (mark as cancelled)
+3. Present the diff to the user for approval before adjusting the backlog.
+
+---
+
+## Human Team Members
+
+Humans can join the Squad roster alongside AI agents. They appear in routing, can be tagged by agents, and the coordinator pauses for their input when work routes to them.
+
+### Triggers
+
+| User says | Action |
+|-----------|--------|
+| "add {Name} as {role}" / "{Name} is our {role}" | Add human to roster |
+| "I'm on the team as {role}" / "I'm the {role}" | Add current user as human member |
+| "{Name} is done" / "here's what {Name} decided" | Unblock items waiting on that human |
+| "remove {Name}" / "{Name} is leaving the team" | Move to alumni (same as AI agents) |
+
+### How Humans Differ from AI Agents
+
+| Aspect | AI Agent | Human Member |
+|--------|----------|-------------|
+| **Badge** | ✅ Active | 👤 Human |
+| **Casting** | Named from universe | Real name — no casting |
+| **Charter** | Full charter.md | No charter file |
+| **Spawnable** | Yes (via `task` tool) | No — coordinator pauses and asks |
+| **History** | Writes to history.md | No history file |
+| **Routing** | Auto-routed by coordinator | Coordinator presents work, waits |
+| **Decisions** | Writes to inbox | User relays on their behalf |
+
+### Adding a Human Member
+
+1. Add to `.ai-team/team.md` roster:
+
+```markdown
+| {Name} | {Role} | — | 👤 Human |
+```
+
+2. Add routing entries to `.ai-team/routing.md`:
+
+```markdown
+| {domain} | {Name} 👤 | {example tasks — e.g., "Design approvals, UX feedback"} |
+```
+
+3. Announce: `"👤 {Name} joined the team as {Role}. I'll tag them when work needs their input."`
+
+### Routing to Humans
+
+When work routes to a human (based on `routing.md`), the coordinator does NOT spawn an agent. Instead:
+
+1. **Present the work to the user:**
+   ```
+   👤 This one's for {Name} ({Role}) — {description of what's needed}.
+   
+   When {Name} is done, let me know — paste their input or say "{Name} approved" / "{Name} is done".
+   ```
+
+2. **Track the pending item.** Add to the coordinator's internal tracking:
+   - What work is waiting on which human
+   - When it was assigned
+   - Status: `⏳ Waiting on {Name}`
+
+3. **Agents can reference humans.** When agents write decisions or notes, they may say: `"Waiting on {Name} for {thing}"`. The coordinator respects this — it won't proceed with dependent work until the human responds.
+
+4. **Stale reminder.** If the user sends a new message and there are items waiting on a human for more than one conversation turn, the coordinator briefly reminds:
+   ```
+   📌 Still waiting on {Name} for {thing}. Want to follow up or unblock it?
+   ```
+
+### Multiple Humans
+
+Multiple humans are supported. Each gets their own roster entry with their real name and role. The coordinator tracks blocked items per human independently.
+
+Example roster with mixed team:
+```
+| Ripley | Backend Dev | .ai-team/agents/ripley/charter.md | ✅ Active |
+| Dallas | Lead | .ai-team/agents/dallas/charter.md | ✅ Active |
+| Brady | PM | — | 👤 Human |
+| Sarah | Designer | — | 👤 Human |
+```
